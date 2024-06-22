@@ -6,7 +6,7 @@
 
 Shell *shell;
 
-Shell::Shell() {
+Shell::Shell() : mouse_pos { Point(0,0) } {
 	//this->cmd_manager = CommandManager();
 }
 
@@ -24,6 +24,7 @@ void Shell::draw_toolbar() {
 	graphics->draw_string(Point(148,20), to_string(global_allocator.get_free_memory() / 1024));
 	graphics->draw_string(Point(210,4), to_string(get_used_dynamic_memory() / 1024));
 	graphics->draw_string(Point(210,20), to_string(get_free_dynamic_memory() / 1024));
+	graphics->draw_string(Point(500,20), to_string(PIT::time_since_boot));
 }
 
 void print_welcome() {
@@ -32,6 +33,9 @@ void print_welcome() {
 	out::println("=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
 	out::newline();
 }
+
+bool is_cursor_on = false;
+Point last_cursor_coord(0,0);
 
 void Shell::init_shell() {
 	graphics->set_color(SHELL_COLOR);
@@ -48,35 +52,30 @@ void Shell::init_shell() {
 
 	/* Every Half Second:
 	 *  - Updates cursor
+	 * 
+	 * Every (roughly) 1/1000 Seconds:
 	 *  - Updates toolbar
 	 *  - Swaps graphics
 	 */
 
 	uint64_t ticks = 0;
-	bool is_cursor_on = false;
-	Point last_cursor_coord(0,0);
+	bool last_half_second_state = false;
 
 	while(true) {
-		if(ticks % 50 == 0) { //every half second
-			is_cursor_on = !is_cursor_on;
-			if(last_cursor_coord != out::get_cursor_coords()) { //cursor has moved
-				graphics->set_color(SHELL_COLOR);
-				graphics->draw_rect(Point(last_cursor_coord.x, last_cursor_coord.y + 16), Point(last_cursor_coord.x + 8, last_cursor_coord.y + 18));
-			}
-			if(is_cursor_on) {
-				graphics->set_color(0xFF000000);
-				graphics->draw_rect(Point(out::get_cursor_coords().x, out::get_cursor_coords().y + 16), Point(out::get_cursor_coords().x + 8, out::get_cursor_coords().y + 18));
-			}else {
-				graphics->set_color(SHELL_COLOR);
-				graphics->draw_rect(Point(out::get_cursor_coords().x, out::get_cursor_coords().y + 16), Point(out::get_cursor_coords().x + 8, out::get_cursor_coords().y + 18));
-			}
-			last_cursor_coord = out::get_cursor_coords();
-			draw_toolbar();
-			graphics->swap();
-			ticks = 0; //reset
+		if((size_t)(PIT::time_since_boot * 4) % 2 == 0 && !last_half_second_state) { //every half second
+			last_half_second_state = true;
+			update_cursor(true);
+		}else if((size_t)(PIT::time_since_boot * 4) % 2 != 0 && last_half_second_state) {
+			last_half_second_state = false;
 		}
+		if(last_cursor_coord != out::get_cursor_coords()) {
+			update_cursor(false);
+		}
+		process_mouse_packet();
+		draw_toolbar();
+		graphics->swap();
 		ticks++;
-		PIT::sleep(10);
+		PIT::sleep(5);
 	}
 
 }
@@ -89,6 +88,18 @@ void Shell::execute_command(char *args) {
 	return;
 }
 
-// IO *Shell::get_io() {
-// 	return &io;
-// }
+void Shell::update_cursor(bool update_state) {
+	if(update_state) is_cursor_on = !is_cursor_on;
+	if(last_cursor_coord != out::get_cursor_coords()) { //cursor has moved
+		graphics->set_color(SHELL_COLOR);
+		graphics->draw_rect(Point(last_cursor_coord.x, last_cursor_coord.y + 16), Point(last_cursor_coord.x + 8, last_cursor_coord.y + 18));
+	}
+	if(is_cursor_on || !update_state) {
+		graphics->set_color(0xFF000000);
+		graphics->draw_rect(Point(out::get_cursor_coords().x, out::get_cursor_coords().y + 16), Point(out::get_cursor_coords().x + 8, out::get_cursor_coords().y + 18));
+	}else {
+		graphics->set_color(SHELL_COLOR);
+		graphics->draw_rect(Point(out::get_cursor_coords().x, out::get_cursor_coords().y + 16), Point(out::get_cursor_coords().x + 8, out::get_cursor_coords().y + 18));
+	}
+	last_cursor_coord = out::get_cursor_coords();
+}

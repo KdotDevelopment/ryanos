@@ -25,13 +25,13 @@ void out::print(const char *str) {
 			graphics->draw_char(Point((cursor_pos.x * 8) + 5, (cursor_pos.y * 16) + 45), *chr); //don't draw a '\n'!
 			cursor_pos.x += 1;
 		}
-		if(cursor_pos.x + 8 > graphics->get_width()) {
+		if((cursor_pos.x * 8) + 16 > graphics->get_width()) {
 			cursor_pos.x = 0;
 			cursor_pos.y += 1;
 		}
 		chr++; //pointer arith.
 	}
-	graphics->swap();
+	//graphics->swap();
 	graphics->set_color(prev_color);
 }
 
@@ -53,7 +53,7 @@ void out::cprint(char chr) {
 		cursor_pos.x = 0;
 		cursor_pos.y += 1;
 	}
-	graphics->swap();
+	//graphics->swap();
 	graphics->set_color(prev_color);
 }
 
@@ -82,7 +82,7 @@ void out::backspace() {
 	graphics->draw_rect(Point((cursor_pos.x * 8) + 5, (cursor_pos.y * 16) + 45),
 						Point((cursor_pos.x * 8) + 5 + 8, (cursor_pos.y * 16) + 45 + 16)); //clears the current space so two characters can't overlap
 	graphics->set_color(prev_color);
-	graphics->swap();
+	//graphics->swap();
 }
 
 void out::init_user() {

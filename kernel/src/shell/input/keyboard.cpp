@@ -27,6 +27,7 @@ void Shell::handle_keyboard(uint8_t scancode) {
 			return;
 		case BACKSPACE:
 			current_line_index--;
+			if(current_line_index < 0) current_line_index = 0;
 			current_line[current_line_index] = 0;
 			out::backspace();
 			return;

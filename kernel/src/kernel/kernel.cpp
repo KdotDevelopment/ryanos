@@ -68,16 +68,14 @@ void prepare_interrupts() {
     set_idt_gate((void*)double_fault_handler, 0x8, IDT_TA_INTERRUPT_GATE, 0x08);
     set_idt_gate((void*)gp_fault_handler, 0xD, IDT_TA_INTERRUPT_GATE, 0x08);
     set_idt_gate((void*)keyboard_int_handler, 0x21, IDT_TA_INTERRUPT_GATE, 0x08);
+	set_idt_gate((void*)mouse_int_handler, 0x2C, IDT_TA_INTERRUPT_GATE, 0x08);
     set_idt_gate((void*)pit_int_handler, 0x20, IDT_TA_INTERRUPT_GATE, 0x08);
 
 	asm("lidt %0" : : "m" (idtr));
 
 	remap_pic();
 
-	outb(PIC1_DATA, 0b11111000);
-	outb(PIC2_DATA, 0b11101101);
-
-	asm("sti");
+	//asm("sti");
 }
 
 Graphics temp_graphics = Graphics(NULL, NULL);
@@ -98,10 +96,15 @@ extern "C" void _start(boot_info_t *boot_info) {
 	temp_graphics = Graphics(boot_info->framebuffer, boot_info->font);
 	graphics = &temp_graphics;
 
-	PIT::set_divisor(2983); //resonable precision, 1193182 / 2983 = ~399.993966, this means ~400 ticks a second
+	PIT::set_divisor(2983*8); //resonable precision, 1193182 / 2983 = ~399.993966, this means ~400 ticks a second
 
 	temp_shell = Shell();
 	shell = &temp_shell;
+	shell->init_mouse();
+
+	outb(PIC1_DATA, 0b11111000);
+	outb(PIC2_DATA, 0b11101101);
+
 	shell->init_shell();
 
 	while(true);
