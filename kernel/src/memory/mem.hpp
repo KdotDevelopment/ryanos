@@ -23,6 +23,11 @@ void free(void *p);
 
 void expand_heap(size_t length);
 
+inline void *operator new(size_t size) {return malloc(size); }
+inline void *operator new[](size_t size) {return malloc(size); }
+
+inline void operator delete(void *p) {free(p); }
+
 unsigned long get_total_dynamic_memory();
 unsigned long get_used_dynamic_memory();
 unsigned long get_free_dynamic_memory();

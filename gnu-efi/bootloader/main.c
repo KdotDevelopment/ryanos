@@ -158,7 +158,15 @@ typedef struct {
 	EFI_MEMORY_DESCRIPTOR *m_map;
 	UINTN m_map_size;
 	UINTN m_map_descriptor_size;
+	void *rsdp;
 } boot_info_t;
+
+UINTN strcmp(CHAR8 *a, CHAR8 *b, UINTN length) {
+	for(UINTN i = 0; i < length; i++) {
+		if (*a != *b) return 0;
+	}
+	return 1;
+}
 
 EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {	
 	InitializeLib(ImageHandle, SystemTable); //allows uefi to use certain commands
@@ -251,6 +259,20 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
 
 	}
 
+	EFI_CONFIGURATION_TABLE *config_table = SystemTable->ConfigurationTable;
+	void *rsdp = NULL;
+	EFI_GUID acpi_2_table_guid = ACPI_20_TABLE_GUID;
+
+	for(UINTN index = 0; index < SystemTable->NumberOfTableEntries; index++) {
+		if(CompareGuid(&config_table[index].VendorGuid, &acpi_2_table_guid)) {
+			if(strcmp((CHAR8 *)"RSD PTR ", (CHAR8 *)config_table->VendorTable, 8)) {
+				rsdp = (void *)config_table->VendorTable;
+				//break; //cant break because the first one found is version 1 which is bad
+			}
+		}
+		config_table++;
+	}
+
 	void (*KernelStart)(boot_info_t*) = ((__attribute__((sysv_abi)) void (*)(boot_info_t*) ) header.e_entry);
 
 	boot_info_t boot_info;
@@ -259,6 +281,7 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
 	boot_info.m_map = Map;
 	boot_info.m_map_size = MapSize;
 	boot_info.m_map_descriptor_size = DescriptorSize;
+	boot_info.rsdp = rsdp;
 
 	Print(L"%d", Map->NumberOfPages);
 

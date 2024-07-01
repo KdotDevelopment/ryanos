@@ -22,8 +22,8 @@ void Shell::draw_toolbar() {
 	graphics->draw_string(Point(100,20), "free: ");
 	graphics->draw_string(Point(148,4), to_string(global_allocator.get_used_memory() / 1024));
 	graphics->draw_string(Point(148,20), to_string(global_allocator.get_free_memory() / 1024));
-	graphics->draw_string(Point(210,4), to_string(get_used_dynamic_memory() / 1024));
-	graphics->draw_string(Point(210,20), to_string(get_free_dynamic_memory() / 1024));
+	graphics->draw_string(Point(230,4), to_string(get_used_dynamic_memory() / 1024));
+	graphics->draw_string(Point(230,20), to_string(get_free_dynamic_memory() / 1024));
 	graphics->draw_string(Point(500,20), to_string(PIT::time_since_boot));
 }
 
@@ -50,18 +50,20 @@ void Shell::init_shell() {
 	out::init_user();
 	memset(current_line, (uint8_t)0, MAX_COMMAND_CHARACTERS);
 
+	graphics->swap();
+
 	/* Every Half Second:
 	 *  - Updates cursor
 	 * 
-	 * Every (roughly) 1/1000 Seconds:
+	 * Every (roughly) 1/200 Seconds:
 	 *  - Updates toolbar
 	 *  - Swaps graphics
 	 */
 
-	uint64_t ticks = 0;
+	//uint64_t ticks = 0;
 	bool last_half_second_state = false;
 
-	while(true) {
+	/*while(true) {
 		if((size_t)(PIT::time_since_boot * 4) % 2 == 0 && !last_half_second_state) { //every half second
 			last_half_second_state = true;
 			update_cursor(true);
@@ -71,12 +73,12 @@ void Shell::init_shell() {
 		if(last_cursor_coord != out::get_cursor_coords()) {
 			update_cursor(false);
 		}
-		process_mouse_packet();
+		//process_mouse_packet();
 		draw_toolbar();
 		graphics->swap();
-		ticks++;
+		//ticks++;
 		PIT::sleep(5);
-	}
+	}*/
 
 }
 

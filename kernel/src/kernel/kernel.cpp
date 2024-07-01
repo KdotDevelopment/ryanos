@@ -1,10 +1,11 @@
 #include "kernel.hpp"
 #include "efi_memory.hpp"
+#include "pci.hpp"
 #include "io.hpp"
-#include "../gdt/gdt.hpp"
-#include "../lib/cstr.hpp"
-#include "../shell/out.hpp"
 #include "../shell/shell.hpp"
+#include "../shell/out.hpp"
+#include "../lib/cstr.hpp"
+#include "../gdt/gdt.hpp"
 #include "../memory/page_frame_allocator.hpp"
 #include "../memory/page_table_manager.hpp"
 #include "../memory/page_map_indexer.hpp"
@@ -78,6 +79,15 @@ void prepare_interrupts() {
 	//asm("sti");
 }
 
+void prepare_acpi(boot_info_t *boot_info) {
+	ACPI::SDTHeader *xsdt = (ACPI::SDTHeader *)(boot_info->rsdp->xsdt_address);
+
+	ACPI::MCFGHeader *mcfg = (ACPI::MCFGHeader *)ACPI::find_table(xsdt, (char *)"MCFG");
+
+	PCI::enumerate_pci(mcfg);
+	graphics->swap();
+}
+
 Graphics temp_graphics = Graphics(NULL, NULL);
 Shell temp_shell = Shell();
 extern "C" void _start(boot_info_t *boot_info) {
@@ -89,7 +99,7 @@ extern "C" void _start(boot_info_t *boot_info) {
 
 	prepare_memory(boot_info);
 
-	init_heap((void *)0x0000100000000000, (20 * 1024 * 1024) / 4096); //20 MiB
+	init_heap((void *)0x0000100000000000, (50 * 1024 * 1024) / 4096); //20 MiB
 
 	prepare_interrupts();
 
@@ -106,6 +116,8 @@ extern "C" void _start(boot_info_t *boot_info) {
 	outb(PIC2_DATA, 0b11101101);
 
 	shell->init_shell();
+
+	prepare_acpi(boot_info);
 
 	while(true);
 }

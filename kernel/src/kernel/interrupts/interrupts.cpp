@@ -27,7 +27,7 @@ __attribute__((interrupt)) void keyboard_int_handler(interrupt_frame *frame) {
 
 __attribute__((interrupt)) void mouse_int_handler(interrupt_frame *frame) {
 	uint8_t mouse_data = inb(0x60);
-	out::print("c");
+	//out::print("c");
 	shell->handle_mouse(mouse_data);
 	pic_end_slave();
 }
