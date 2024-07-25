@@ -6,6 +6,9 @@
 #include "acpi.hpp"
 #include "efi_memory.hpp"
 
+extern uint64_t _KernelStart;
+extern uint64_t _KernelEnd;
+
 struct boot_info_t {
 	Framebuffer *framebuffer;
 	psf1_font_t *font;

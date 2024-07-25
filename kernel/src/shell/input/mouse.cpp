@@ -73,7 +73,7 @@ void Shell::process_mouse_packet() {
 	}
 
 	if(!y_neg) {
-		mouse_pos.y -= mouse_packet[1];
+		mouse_pos.y -= mouse_packet[2];
 		if(y_overflow) mouse_pos.y -= 255;
 	}else {
 		mouse_packet[2] = 256 - mouse_packet[2];

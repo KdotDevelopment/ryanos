@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "ahci.hpp"
 
 #define FAT32_LFN_CHARS_PER 13
 #define FAT32_LFN_MAX 20
@@ -35,6 +36,7 @@ typedef struct {
 	uint32_t file_size; //in bytes
 }__attribute__((packed)) Fat32DirectoryEntry;
 
+//This entry is placed right before the regular directory entry
 typedef struct {
 	uint8_t order;
 	uint8_t first_five[10]; //5, 2 byte characters
@@ -66,7 +68,7 @@ typedef struct {
 	uint8_t boot_jmp[3];
 	uint8_t oem_name[8];
 	uint16_t bytes_per_sector;
-	uint8_t sectors_per_clusters;
+	uint8_t sectors_per_cluster;
 	uint16_t reserved_sector_count;
 	uint8_t table_count;
 	uint16_t root_entry_count;
@@ -103,3 +105,48 @@ typedef struct {
 
 	Fat32DirectoryEntry directory_entry;
 } Fat32OpenFD;
+
+typedef struct {
+	uint8_t attributes;
+	uint8_t cylinder_start;
+	uint8_t head_start;
+	uint8_t sector_start;
+	uint8_t filesystem;
+	uint8_t cylinder_end;
+	uint8_t head_end;
+	uint8_t sector_end;
+	uint32_t LBA_start;
+	uint32_t size;
+} Partition;
+
+class FAT32 {
+	enum FatType {
+		T_ExFAT,
+		T_FAT12,
+		T_FAT16,
+		T_FAT32
+	};
+	AHCI::Port *port;
+
+	FatType fat_type;
+
+	Fat32BootSector *boot_sector; //see fat32 struct above
+
+	uint8_t *temp_buffer1;
+	uint8_t *temp_buffer2;
+
+	uint64_t partition_start;
+
+	uint32_t first_data_sector;
+	uint32_t root_dir_start;
+	uint32_t total_sectors;
+	uint32_t total_clusters;
+	uint32_t cluster_size;
+	uint32_t *fat_cache; //see fat32 struct above
+
+	uint32_t read_fat_entry(uint32_t cluster);
+	uint32_t write_fat_entry(uint32_t cluster, uint32_t value);
+
+	public:
+	FAT32(int driver);
+};

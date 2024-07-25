@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stddef.h>
 #include "acpi.hpp"
 
 namespace PCI {
@@ -11,8 +12,8 @@ namespace PCI {
 		uint16_t status;
 		uint8_t revision_id;
 		uint8_t program_interface;
-		uint8_t subclass;
-		uint8_t Class; //AWWW WHAT class is already defined...
+		uint8_t subclass_id;
+		uint8_t class_id;
 		uint8_t cache_line_size;
 		uint8_t latency_timer;
 		uint8_t header_type;
@@ -42,6 +43,9 @@ namespace PCI {
 	};
 
 	void enumerate_pci(ACPI::MCFGHeader *mcfg);
+
+	void *get_ahci_driver(int driver);
+	uint64_t get_driver_count();
 
 	extern const char *device_classes[];
 

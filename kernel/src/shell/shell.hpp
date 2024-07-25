@@ -23,11 +23,13 @@ class Shell {
 	char current_line[MAX_COMMAND_CHARACTERS];
 	void update_cursor(bool update_state);
 	Point mouse_pos;
+	uint64_t fps;
 
 	public:
 	//CommandManager cmd_manager;
 	Shell();
 	void init_shell();
+	void start_loop();
 	void execute_command(char *args);
 	void handle_keyboard(uint8_t scancode);
 	void init_mouse();

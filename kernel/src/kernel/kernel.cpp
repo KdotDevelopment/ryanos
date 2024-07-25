@@ -5,6 +5,8 @@
 #include "../shell/shell.hpp"
 #include "../shell/out.hpp"
 #include "../lib/cstr.hpp"
+#include "../fs/fat32.hpp"
+#include "../fs/ahci.hpp"
 #include "../gdt/gdt.hpp"
 #include "../memory/page_frame_allocator.hpp"
 #include "../memory/page_table_manager.hpp"
@@ -15,9 +17,6 @@
 #include "interrupts/pit/pit.hpp"
 #include "interrupts/idt.hpp"
 #include <stdint.h>
-
-extern uint64_t _KernelStart;
-extern uint64_t _KernelEnd;
 
 void prepare_memory(boot_info_t *boot_info) {
 	uint64_t m_map_entries = boot_info->m_map_size / boot_info->m_map_descriptor_size;
@@ -76,7 +75,7 @@ void prepare_interrupts() {
 
 	remap_pic();
 
-	//asm("sti");
+	asm("sti");
 }
 
 void prepare_acpi(boot_info_t *boot_info) {
@@ -85,7 +84,6 @@ void prepare_acpi(boot_info_t *boot_info) {
 	ACPI::MCFGHeader *mcfg = (ACPI::MCFGHeader *)ACPI::find_table(xsdt, (char *)"MCFG");
 
 	PCI::enumerate_pci(mcfg);
-	graphics->swap();
 }
 
 Graphics temp_graphics = Graphics(NULL, NULL);
@@ -99,7 +97,7 @@ extern "C" void _start(boot_info_t *boot_info) {
 
 	prepare_memory(boot_info);
 
-	init_heap((void *)0x0000100000000000, (50 * 1024 * 1024) / 4096); //20 MiB
+	init_heap((void *)0x0000100000000000, (50 * 1024 * 1024) / 4096); //50 MiB //0x0000100000000000
 
 	prepare_interrupts();
 
@@ -118,6 +116,19 @@ extern "C" void _start(boot_info_t *boot_info) {
 	shell->init_shell();
 
 	prepare_acpi(boot_info);
+
+	/*AHCI::Port *port = ((AHCI::AHCIDriver *)(PCI::get_ahci_driver(0)))->disk_drive; //gets the main hard drive
+	port->buffer = (uint8_t *)global_allocator.request_page();
+	memset(port->buffer, 0, 0x1000);
+
+	port->read(12, 4, port->buffer);
+	for(int t = 0; t < 1024; t++) {
+		out::cprint(port->buffer[t]);
+	}*/
+
+	FAT32 fs(0);
+
+	shell->start_loop();
 
 	while(true);
 }

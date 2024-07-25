@@ -17,7 +17,7 @@ Graphics::Graphics(Framebuffer *framebuffer, psf1_font_t *font) {
 	this->height = framebuffer->height;
 	this->pps = framebuffer->pps;
 	//this->backbuffer = { 0 };
-	this->backbuffer = (unsigned int*)malloc(width * height * 4);
+	this->backbuffer = (unsigned int *)(malloc(width * height * 4));
 	/*for(int i = 0; i < width*height; i++) {
 		backbuffer[i] = 0xFF0000FF;
 	}*/
@@ -85,22 +85,29 @@ void Graphics::draw_string(Point point, const char *str) {
 void Graphics::draw_rect(Point point1, Point point2) {
 	if(point1.x > framebuffer->width || point1.y > framebuffer->height) return;
 	if(point2.x > framebuffer->width || point2.y > framebuffer->height) return;
-	unsigned int *pix_ptr = (unsigned int *)framebuffer->base_address;
-	for(unsigned int x = point1.x; x < point2.x; x++) {
+
+	unsigned int *pix_ptr = (unsigned int *)backbuffer;
+	size_t row_size = (point2.x - point1.x) * sizeof(unsigned int);
+
+	/*for(unsigned int x = point1.x; x < point2.x; x++) {
 		for(unsigned int y = point1.y; y < point2.y; y++) {
 			//draw_pixel(Point(x, y), color);
 			//*(unsigned int *)(pix_ptr + x + (y * framebuffer->pps)) = color;
 			backbuffer[y * pps + x] = color;
 		}
+	}*/
+	for(unsigned int y = point1.y; y < point2.y; y++) {
+		unsigned int *row_start = pix_ptr + (y * framebuffer->pps) + point1.x;
+        memset(row_start, color, row_size);
 	}
 }
 
 void Graphics::clear_screen() {
-	for(int x = 0; x < get_width(); x++){
+	/*for(int x = 0; x < get_width(); x++){
 		for(int y = 0; y < get_height(); y++) {
 			backbuffer[y * pps + x] = color;
 		}
-	}
+	}*/
 	/*uint64_t fb_base = (uint64_t)framebuffer->base_address;
     uint64_t bpsl = framebuffer->pps * 4;
     uint64_t fb_height = framebuffer->height;
@@ -112,7 +119,7 @@ void Graphics::clear_screen() {
             *pix_ptr = color;
         }
     }*/
-	//memset(backbuffer, color, framebuffer->buffer_size);
+	memset(backbuffer, color, framebuffer->buffer_size);
 }
 
 void Graphics::swap() {
@@ -128,6 +135,6 @@ void Graphics::swap() {
 			*pix_ptr = *backbuffer++;
 		}
 	}*/
-	uint32_t *pix_ptr = (uint32_t *)framebuffer->base_address;
-    memcopy(pix_ptr, backbuffer, framebuffer->buffer_size);
+	//uint32_t *pix_ptr = (uint32_t *)framebuffer->base_address;
+    memcopy((uint32_t *)framebuffer->base_address, backbuffer, framebuffer->buffer_size);
 }

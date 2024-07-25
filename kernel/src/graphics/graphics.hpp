@@ -7,15 +7,16 @@
 
 class Graphics {
 	private:
-	Framebuffer *framebuffer;
 	psf1_font_t *font;
 	uint32_t color;
 	int width, height, pps;
-	uint32_t *backbuffer;
 
 	public:
 	Graphics();
 	Graphics(Framebuffer *framebuffer, psf1_font_t *font);
+
+	uint32_t *backbuffer;
+	Framebuffer *framebuffer;
 
 	int get_width();
 	int get_height();

@@ -20,6 +20,8 @@ void init_heap(void *heap_address, size_t page_count);
 
 void *malloc(size_t size);
 void free(void *p);
+void *aligned_alloc(size_t alignment, size_t size);
+void aligned_free(void *ptr);
 
 void expand_heap(size_t length);
 
@@ -33,4 +35,4 @@ unsigned long get_used_dynamic_memory();
 unsigned long get_free_dynamic_memory();
 
 void memcopy(void *dest, const void *src, size_t n);
-void memset(void *start, uint8_t value, uint64_t num);
+void memset(void *start, uint32_t c, uint64_t num);

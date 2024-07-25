@@ -163,7 +163,7 @@ void *malloc(size_t size) {
 		used_memory_total += size + sizeof(dynamic_mem_node_t);
 
 		//return ptr to new memory
-		return (void *) ((uint8_t *) mem_node_allocate + sizeof(dynamic_mem_node_t));
+		return (void *) ((uint8_t *) best_mem_block + sizeof(dynamic_mem_node_t));
 	}
 	expand_heap(size);
 	return malloc(size);
@@ -204,6 +204,37 @@ void free(void *p) {
 	merge_current_node_into_prev(current_node);
 }
 
+void *aligned_alloc(size_t alignment, size_t size) {
+    // Ensure alignment is a power of two and at least sizeof(void*)
+    if ((alignment & (alignment - 1)) != 0 || alignment < sizeof(void*)) {
+        return NULL;
+    }
+
+    // Allocate a block of memory with additional space to store the alignment metadata
+    size_t total_size = size + alignment + sizeof(void*);
+    void *raw_memory = malloc(total_size);
+    if (raw_memory == NULL) {
+        return NULL;
+    }
+
+    // Align the pointer within the allocated block
+    uintptr_t raw_address = (uintptr_t)raw_memory;
+    uintptr_t aligned_address = (raw_address + alignment + sizeof(void*)) & ~(alignment - 1);
+
+    // Store the raw address just before the aligned address
+    ((uintptr_t*)aligned_address)[-1] = raw_address;
+
+    return (void*)aligned_address;
+}
+
+void aligned_free(void *ptr) {
+    if (ptr != NULL) {
+        // Retrieve the raw address from just before the aligned address
+        uintptr_t raw_address = ((uintptr_t*)ptr)[-1];
+        free((void*)raw_address);
+    }
+}
+
 void expand_heap(size_t length) {
 	if (length % 0x1000) {
 		length -= length % 0x1000;
@@ -219,7 +250,7 @@ void expand_heap(size_t length) {
     }
 }
 
-void memcopy(void *dest, const void *src, size_t n) {
+/*void memcopy(void *dest, const void *src, size_t n) {
 	// Pointers to the start of the source and destination buffers
 	uint64_t* d64 = (uint64_t*)dest;
 	const uint64_t* s64 = (const uint64_t*)src;
@@ -239,10 +270,160 @@ void memcopy(void *dest, const void *src, size_t n) {
 			d_byte[i] = s_byte[i];
 		}
 	}
+}*/
+
+void memcopy(void *dest, const void *src, size_t n) {
+    // Copy data in 128-bit chunks
+    if (n >= 16) {
+        size_t num_ints128 = n / 16;
+
+        __asm__ __volatile__ (
+            "1:                                 \n"
+            "movdqu (%1), %%xmm0                \n" // Load 128 bits from src
+            "movdqu %%xmm0, (%0)                \n" // Store 128 bits to dest
+            "add $16, %0                        \n" // Increment dest by 16
+            "add $16, %1                        \n" // Increment src by 16
+            "dec %2                             \n" // Decrement counter
+            "jnz 1b                             \n" // Loop if counter != 0
+            : "+r" (dest), "+r" (src), "+r" (num_ints128)
+            :
+            : "memory", "xmm0"
+        );
+
+        n %= 16;
+    }
+
+    // Copy remaining data in 64-bit chunks
+    if (n >= 8) {
+        size_t num_ints64 = n / 8;
+
+        __asm__ __volatile__ (
+            "rep movsq"
+            : "+D" (dest), "+S" (src), "+c" (num_ints64)
+            :
+            : "memory"
+        );
+
+        n %= 8;
+    }
+
+    // Copy remaining bytes using rep movsb
+    if (n > 0) {
+        __asm__ __volatile__ (
+            "rep movsb"
+            : "+D" (dest), "+S" (src), "+c" (n)
+            :
+            : "memory"
+        );
+    }
 }
 
-void memset(void *start, uint8_t value, uint64_t num) {
-	for(uint64_t i = 0; i < num; i++) {
-		*(uint8_t *)((uint64_t)start + i) = value;
-	}
+/*void memcopy(void *dest, const void *src, size_t n) {
+    uint8_t* d = (uint8_t*)dest;
+    const uint8_t* s = (const uint8_t*)src;
+
+    // Align destination pointer to 32-byte boundary
+    while (n >= 64 && (uintptr_t)d % 64 != 0) {
+        *d++ = *s++;
+        n--;
+    }
+
+    // Copy data in 256-bit (32-byte) chunks
+    if (n >= 32) {
+        size_t num_blocks = n / 32;
+        size_t remaining = n % 32;
+
+        __asm__ __volatile__ (
+            "1:\n\t"
+            "vmovups (%1), %%ymm0\n\t" // Load 256 bits from src
+            "vmovups %%ymm0, (%0)\n\t" // Store 256 bits to dest
+            "add $32, %0\n\t"          // Increment dest by 32
+            "add $32, %1\n\t"          // Increment src by 32
+            "dec %2\n\t"               // Decrement counter
+            "jnz 1b\n\t"               // Loop if counter != 0
+            : "+r"(d), "+r"(s), "+r"(num_blocks)
+            : 
+            : "memory", "ymm0"
+        );
+
+        d += (n - remaining); // Adjust pointer after 256-bit copy
+        s += (n - remaining);
+        n = remaining;
+    }
+
+    // Copy remaining data in 128-bit (16-byte) chunks
+    if (n >= 16) {
+        size_t num_blocks = n / 16;
+        size_t remaining = n % 16;
+
+        __asm__ __volatile__ (
+            "1:\n\t"
+            "movdqu (%1), %%xmm0\n\t"  // Load 128 bits from src
+            "movdqu %%xmm0, (%0)\n\t"  // Store 128 bits to dest
+            "add $16, %0\n\t"          // Increment dest by 16
+            "add $16, %1\n\t"          // Increment src by 16
+            "dec %2\n\t"               // Decrement counter
+            "jnz 1b\n\t"               // Loop if counter != 0
+            : "+r"(d), "+r"(s), "+r"(num_blocks)
+            : 
+            : "memory", "xmm0"
+        );
+
+        d += (n - remaining); // Adjust pointer after 128-bit copy
+        s += (n - remaining);
+        n = remaining;
+    }
+
+    // Copy remaining data in 64-bit (8-byte) chunks
+    if (n >= 8) {
+        size_t num_blocks = n / 8;
+        size_t remaining = n % 8;
+
+        __asm__ __volatile__ (
+            "1:\n\t"
+            "movsq\n\t"                // Move 64 bits (8 bytes) from src to dest
+            "dec %2\n\t"               // Decrement counter
+            "jnz 1b\n\t"               // Loop if counter != 0
+            : "+D"(d), "+S"(s), "+r"(num_blocks)
+            : 
+            : "memory"
+        );
+
+        d += (n - remaining); // Adjust pointer after 64-bit copy
+        s += (n - remaining);
+        n = remaining;
+    }
+
+    // Copy remaining bytes using rep movsb
+    if (n > 0) {
+        __asm__ __volatile__ (
+            "rep movsb\n\t"            // Move remaining bytes
+            : "+D"(d), "+S"(s), "+c"(n)
+            : 
+            : "memory"
+        );
+    }
+}*/
+
+void memset(void *start, uint32_t c, uint64_t num) {
+	uint64_t value64 = (uint64_t)c | ((uint64_t)c << 32);
+    uint64_t *dest = (uint64_t *)start;
+
+    // Calculate the number of 64-bit chunks
+    uint64_t num_qwords = num / 8;
+    uint64_t remaining_bytes = num % 8;
+
+    __asm__ __volatile__ (
+        "rep stosq\n"                  // Repeat storing the 64-bit value
+        : "=D" (dest), "=c" (num_qwords)  // Output operands
+        : "0" (dest), "1" (num_qwords), "a" (value64) // Input operands
+        : "memory"                     // Clobbered registers
+    );
+
+    // Handle any remaining bytes
+    uint8_t *byte_dest = (uint8_t *)dest;
+    uint8_t *value_bytes = (uint8_t *)&c;
+    for (uint64_t i = 0; i < remaining_bytes; i++) {
+        *byte_dest++ = value_bytes[i % 4];
+    }
 }

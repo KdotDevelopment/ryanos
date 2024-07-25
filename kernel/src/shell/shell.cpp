@@ -13,10 +13,12 @@ Shell::Shell() : mouse_pos { Point(0,0) } {
 void Shell::draw_toolbar() {
 	graphics->set_color(0xFF222255);
 	graphics->draw_rect(Point(0,0), Point(graphics->get_width(), 40));
+	graphics->draw_rect(Point(90,90), Point(150, 150));
 
 	graphics->set_color(0xFFFFFFFF);
 
-	graphics->draw_string(Point(5,5), "RyanOS");
+	graphics->draw_string(Point(5,4), "RyanOS");
+	graphics->draw_string(Point(5,20), "DEV");
 
 	graphics->draw_string(Point(100,4), "used:");
 	graphics->draw_string(Point(100,20), "free: ");
@@ -24,7 +26,9 @@ void Shell::draw_toolbar() {
 	graphics->draw_string(Point(148,20), to_string(global_allocator.get_free_memory() / 1024));
 	graphics->draw_string(Point(230,4), to_string(get_used_dynamic_memory() / 1024));
 	graphics->draw_string(Point(230,20), to_string(get_free_dynamic_memory() / 1024));
-	graphics->draw_string(Point(500,20), to_string(PIT::time_since_boot));
+	graphics->draw_string(Point(320,4), to_string(PIT::time_since_boot));
+	graphics->draw_string(Point(320,20), "FPS: ");
+	graphics->draw_string(Point(360,20), to_string(fps));
 }
 
 void print_welcome() {
@@ -44,6 +48,7 @@ void Shell::init_shell() {
 	graphics->swap();
 
 	out::set_cursor_pos(0, 0);
+	mouse_pos = Point(50,50);
 
 	print_welcome();
 
@@ -51,6 +56,17 @@ void Shell::init_shell() {
 	memset(current_line, (uint8_t)0, MAX_COMMAND_CHARACTERS);
 
 	graphics->swap();
+}
+
+void Shell::start_loop() {
+	bool last_half_second_state = false;
+
+	float frame_start_time = 0;
+	float current_time = 0;
+	float frame_end_time = 0;
+	float delta_time = 0;
+	float start_time = 0;
+	size_t frames;
 
 	/* Every Half Second:
 	 *  - Updates cursor
@@ -60,26 +76,39 @@ void Shell::init_shell() {
 	 *  - Swaps graphics
 	 */
 
-	//uint64_t ticks = 0;
-	bool last_half_second_state = false;
+	start_time = PIT::time_since_boot;
+	while(true) {
+		frame_start_time = PIT::time_since_boot;
+		
 
-	/*while(true) {
-		if((size_t)(PIT::time_since_boot * 4) % 2 == 0 && !last_half_second_state) { //every half second
+		if((size_t)(frame_start_time * 4) % 2 == 0 && !last_half_second_state) { //every half second
 			last_half_second_state = true;
 			update_cursor(true);
-		}else if((size_t)(PIT::time_since_boot * 4) % 2 != 0 && last_half_second_state) {
+		}else if((size_t)(frame_start_time * 4) % 2 != 0 && last_half_second_state) {
 			last_half_second_state = false;
 		}
 		if(last_cursor_coord != out::get_cursor_coords()) {
 			update_cursor(false);
 		}
-		//process_mouse_packet();
+		process_mouse_packet();
+		
 		draw_toolbar();
 		graphics->swap();
-		//ticks++;
-		PIT::sleep(5);
-	}*/
 
+		current_time = PIT::time_since_boot;
+
+		frame_end_time = current_time;
+
+		delta_time += frame_end_time - frame_start_time;
+		frames++;
+
+		if(current_time - start_time > 1.0) {
+			fps = (uint64_t) frames / delta_time;
+			frames = 0;
+			delta_time = 0;
+			memcopy(&start_time, &current_time, sizeof(float)); //FASTER VERSION OF: start_time = current_time;
+		}
+	}
 }
 
 void Shell::execute_command(char *args) {
