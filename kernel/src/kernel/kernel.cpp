@@ -115,7 +115,7 @@ extern "C" void _start(boot_info_t *boot_info) {
 
 	shell->init_shell();
 
-	prepare_acpi(boot_info);
+	//prepare_acpi(boot_info);
 
 	/*AHCI::Port *port = ((AHCI::AHCIDriver *)(PCI::get_ahci_driver(0)))->disk_drive; //gets the main hard drive
 	port->buffer = (uint8_t *)global_allocator.request_page();
@@ -126,7 +126,7 @@ extern "C" void _start(boot_info_t *boot_info) {
 		out::cprint(port->buffer[t]);
 	}*/
 
-	FAT32 fs(0);
+	//FAT32 fs(0);
 
 	shell->start_loop();
 

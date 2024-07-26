@@ -1,8 +1,10 @@
 #pragma once
 
+#include <stdint.h>
+
 class Point {
 	public:
-	unsigned int x, y;
+	int64_t x, y;
 	Point(int x, int y);
 	bool operator!=(Point other_point);
 };

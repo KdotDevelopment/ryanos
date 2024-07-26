@@ -5,6 +5,7 @@
 #include "../memory/mem.hpp"
 #include "../memory/page_frame_allocator.hpp"
 #include "commands/command_manager.hpp"
+#include "input/mouse.hpp"
 
 #define SHELL_COLOR 0xFFEEEEEE
 #define MAX_COMMAND_CHARACTERS 256
@@ -22,8 +23,9 @@ class Shell {
 	void draw_toolbar();
 	char current_line[MAX_COMMAND_CHARACTERS];
 	void update_cursor(bool update_state);
-	Point mouse_pos;
+	Mouse *mouse;
 	uint64_t fps;
+	uint32_t *shell_backbuffer;
 
 	public:
 	//CommandManager cmd_manager;

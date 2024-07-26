@@ -43,6 +43,10 @@ void Graphics::set_framebuffer(Framebuffer *framebuffer) {
 	this->framebuffer = framebuffer;
 }
 
+/*void Graphics::set_backbuffer(uint32_t *backbuffer) {
+	this->backbuffer = backbuffer;
+}*/
+
 void Graphics::set_font(psf1_font_t *font) {
 	this->font = font;
 }
@@ -53,13 +57,12 @@ void Graphics::set_color(uint32_t color) {
 
 void Graphics::draw_pixel(Point point) {
 	if(point.x > framebuffer->width || point.y > framebuffer->height) return;
-	unsigned int *pix_ptr = (unsigned int *)framebuffer->base_address;
+	//unsigned int *pix_ptr = (unsigned int *)framebuffer->base_address;
 	//*(unsigned int *)(pix_ptr + point.x + (point.y * framebuffer->pps)) = color;
 	backbuffer[point.y * pps + point.x] = color;
 }
 
 void Graphics::draw_char(Point point, char character) {
-	unsigned int *pix_ptr = (unsigned int *)framebuffer->base_address;
 	char *font_ptr = (char*)font->glyph_buffer + (character * font->psf1_header->charsize);
 	for(unsigned int y = point.y; y < point.y + 16; y++) {
 		for(unsigned int x = point.x; x < point.x + 8; x++) {
@@ -68,6 +71,21 @@ void Graphics::draw_char(Point point, char character) {
 			}
 		}
 		font_ptr++;
+	}
+}
+
+void Graphics::draw_mouse_cursor(Point point) {
+	for(unsigned int y = point.y; y < point.y + 19; y++) {
+		for(unsigned int x = point.x; x < point.x + 12; x++) {
+			if(mouse_cursor_icon[(y - point.y) * 12 + (x - point.x)] == 1) {
+				graphics->set_color(0xFF000000);
+				draw_pixel(Point(x,y));
+			}
+			if(mouse_cursor_icon[(y - point.y) * 12 + (x - point.x)] == 2) {
+				graphics->set_color(0xFFFFFFFF);
+				draw_pixel(Point(x,y));
+			}
+		}
 	}
 }
 
@@ -85,9 +103,11 @@ void Graphics::draw_string(Point point, const char *str) {
 void Graphics::draw_rect(Point point1, Point point2) {
 	if(point1.x > framebuffer->width || point1.y > framebuffer->height) return;
 	if(point2.x > framebuffer->width || point2.y > framebuffer->height) return;
+	if(point1.x < 0 || point1.y < 0) return;
+	if(point2.x < 0 || point2.y < 0) return;
 
 	unsigned int *pix_ptr = (unsigned int *)backbuffer;
-	size_t row_size = (point2.x - point1.x) * sizeof(unsigned int);
+	size_t row_size = (point2.x - point1.x) * sizeof(uint32_t);
 
 	/*for(unsigned int x = point1.x; x < point2.x; x++) {
 		for(unsigned int y = point1.y; y < point2.y; y++) {

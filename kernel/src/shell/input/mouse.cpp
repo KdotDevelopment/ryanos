@@ -1,4 +1,5 @@
 #include "../shell.hpp"
+#include "mouse.hpp"
 
 void mouse_wait() {
 	uint64_t timeout = 100000;
@@ -63,34 +64,33 @@ void Shell::process_mouse_packet() {
 	x_overflow = mouse_packet[0] & PS2XOVERFLOW ? true : false;
 	y_overflow = mouse_packet[0] & PS2YOVERFLOW ? true : false;
 
+	if((mouse_packet[0] & 0x01)) mouse->button_state = M_LEFT;
+	else if((mouse_packet[0] & 0x02)) mouse->button_state = M_RIGHT;
+	else if((mouse_packet[0] & 0x04)) mouse->button_state = M_MIDDLE;
+	else mouse->button_state = M_NONE;
+	
 	if(!x_neg) {
-		mouse_pos.x += mouse_packet[1];
-		if(x_overflow) mouse_pos.x += 255;
+		mouse->pos.x += mouse_packet[1];
+		//if(x_overflow) mouse_pos.x += 255;
 	}else {
 		mouse_packet[1] = 256 - mouse_packet[1];
-		mouse_pos.x -= mouse_packet[1];
-		if(x_overflow) mouse_pos.x -= 255;
+		mouse->pos.x -= mouse_packet[1];
+		//if(x_overflow) mouse_pos.x -= 255;
 	}
 
 	if(!y_neg) {
-		mouse_pos.y -= mouse_packet[2];
-		if(y_overflow) mouse_pos.y -= 255;
+		mouse->pos.y -= mouse_packet[2];
+		//if(y_overflow) mouse_pos.y -= 255;
 	}else {
 		mouse_packet[2] = 256 - mouse_packet[2];
-		mouse_pos.y += mouse_packet[2];
-		if(y_overflow) mouse_pos.y += 255;
+		mouse->pos.y += mouse_packet[2];
+		//if(y_overflow) mouse_pos.y += 255;
 	}
 
-	if(mouse_pos.x < 0) mouse_pos.x = 0;
-	if(mouse_pos.x > graphics->get_width()-1) mouse_pos.x = graphics->get_width()-1;
-	if(mouse_pos.y < 0) mouse_pos.y = 0;
-	if(mouse_pos.y > graphics->get_height()-1) mouse_pos.y = graphics->get_height()-1;
-
-	graphics->set_color(0xFFFF0000);
-	graphics->draw_pixel(Point(mouse_pos.x, mouse_pos.y));
-	out::print((uint64_t)mouse_pos.x);
-	out::print(", ");
-	out::println((uint64_t)mouse_pos.y);
+	if(mouse->pos.x < 0) mouse->pos.x = 0;
+	if(mouse->pos.x > graphics->get_width()-1) mouse->pos.x = graphics->get_width()-1;
+	if(mouse->pos.y < 0) mouse->pos.y = 0;
+	if(mouse->pos.y > graphics->get_height()-1) mouse->pos.y = graphics->get_height()-1;
 	mouse_packet_ready = false;
 }
 

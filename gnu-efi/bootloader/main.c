@@ -62,13 +62,13 @@ Framebuffer *InitializeGOP() {
 		if(info->HorizontalResolution == DESIRED_WINDOW_X && info->VerticalResolution == DESIRED_WINDOW_Y) {
 			mode = i;
 		}
-		/*Print(L"mode %03d width %d height %d format %x%s \n\r",
+		Print(L"mode %03d width %d height %d format %x%s \n\r",
 			i,
 			info->HorizontalResolution,
 			info->VerticalResolution,
 			info->PixelFormat,
 			i == nativeMode ? "(current)" : ""
-		);*/
+		);
 	}
 
 	status = uefi_call_wrapper(gop->SetMode, 2, gop, mode);

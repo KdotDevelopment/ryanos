@@ -2,18 +2,23 @@
 #include "../memory/mem.hpp"
 #include "../lib/cstr.hpp"
 #include "../memory/bitmap.hpp"
+#include "window_mgr/window_manager.hpp"
 #include "../kernel/interrupts/pit/pit.hpp"
 
 Shell *shell;
 
-Shell::Shell() : mouse_pos { Point(0,0) } {
+Shell::Shell() {
 	//this->cmd_manager = CommandManager();
+	mouse = (Mouse *)malloc(sizeof(Mouse));
+	mouse->pos = Point(0,0);
+	mouse->last_pos = Point(0,0);
+	mouse->delta_pos = Point(0,0);
+	mouse->button_state = MouseState::M_NONE;
 }
 
 void Shell::draw_toolbar() {
 	graphics->set_color(0xFF222255);
 	graphics->draw_rect(Point(0,0), Point(graphics->get_width(), 40));
-	graphics->draw_rect(Point(90,90), Point(150, 150));
 
 	graphics->set_color(0xFFFFFFFF);
 
@@ -48,7 +53,6 @@ void Shell::init_shell() {
 	graphics->swap();
 
 	out::set_cursor_pos(0, 0);
-	mouse_pos = Point(50,50);
 
 	print_welcome();
 
@@ -71,15 +75,32 @@ void Shell::start_loop() {
 	/* Every Half Second:
 	 *  - Updates cursor
 	 * 
-	 * Every (roughly) 1/200 Seconds:
+	 * Every Tick:
 	 *  - Updates toolbar
 	 *  - Swaps graphics
 	 */
 
+	int window_width = 120;
+	int window_height = 70;
+
+	WindowManager window_manager;
+	Window *window = window_manager.create_window(Point(100,100), Point(1000, 720));
+	Window *window2 = window_manager.create_window(Point(600,600), Point(600, 200));
+	Window *window3 = window_manager.create_window(Point(900,600), Point(200, 200));
+
+	memset(window2->canvas->framebuffer.base_address, 0xFFBBBBFF, window2->canvas->framebuffer.buffer_size);
+
+	out::println(window->index);
+	out::println(window2->index);
+
 	start_time = PIT::time_since_boot;
 	while(true) {
 		frame_start_time = PIT::time_since_boot;
-		
+
+		//------------------------------------------
+
+		graphics->set_color(SHELL_COLOR);
+		graphics->clear_screen();
 
 		if((size_t)(frame_start_time * 4) % 2 == 0 && !last_half_second_state) { //every half second
 			last_half_second_state = true;
@@ -90,10 +111,35 @@ void Shell::start_loop() {
 		if(last_cursor_coord != out::get_cursor_coords()) {
 			update_cursor(false);
 		}
-		process_mouse_packet();
-		
+
 		draw_toolbar();
+		process_mouse_packet();
+
+		if(mouse->pos.x < 0) mouse->pos.x = 0;
+		if(mouse->pos.y < 0) mouse->pos.y = 0;
+
+		mouse->delta_pos.x = mouse->pos.x - mouse->last_pos.x;
+		mouse->delta_pos.y = mouse->pos.y - mouse->last_pos.y;
+
+		/*if(window->is_draggable(mouse->last_pos) && mouse->button_state == M_LEFT) {
+			window->position.x += mouse->delta_pos.x;
+			window->position.y += mouse->delta_pos.y;
+			if(window->position.x + window->real_size.x > graphics->get_width()) window->position.x = graphics->get_width() - window->real_size.x;
+			if(window->position.x < 0) window->position.x = 0;
+			if(window->position.y + window->real_size.y > graphics->get_height()) window->position.y = graphics->get_height() - window->real_size.y;
+			if(window->position.y < 0) window->position.y = 0;
+		}*/
+
+		window_manager.handle(mouse);
+
+		graphics->set_color(0xFF000000);
+		graphics->draw_mouse_cursor(Point(mouse->pos.x, mouse->pos.y));
+
 		graphics->swap();
+		
+		mouse->last_pos = mouse->pos;
+
+		//------------------------------------------
 
 		current_time = PIT::time_since_boot;
 

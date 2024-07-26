@@ -61,4 +61,4 @@ buildimg:
 	mcopy -i $(BUILDDIR)/$(OSNAME).img $(BUILDDIR)/zap-light16.psf ::
 
 run:
-	qemu-system-x86_64 -machine q35 -drive file=$(BUILDDIR)/$(OSNAME).img,format=raw -m 256M -cpu max,+avx -no-reboot -no-shutdown -drive if=pflash,format=raw,unit=0,file="$(OVMFDIR)/OVMF_CODE-pure-efi.fd",readonly=on -drive if=pflash,format=raw,unit=1,file="$(OVMFDIR)/OVMF_VARS-pure-efi.fd" -net none
+	qemu-system-x86_64 -machine q35 -drive file=$(BUILDDIR)/$(OSNAME).img,format=raw -m 256M -accel tcg -cpu max,+avx -no-reboot -no-shutdown -drive if=pflash,format=raw,unit=0,file="$(OVMFDIR)/OVMF_CODE-pure-efi.fd",readonly=on -drive if=pflash,format=raw,unit=1,file="$(OVMFDIR)/OVMF_VARS-pure-efi.fd" -net none
