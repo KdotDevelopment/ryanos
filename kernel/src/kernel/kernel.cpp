@@ -1,4 +1,5 @@
 #include "kernel.hpp"
+
 #include "efi_memory.hpp"
 #include "pci.hpp"
 #include "io.hpp"
@@ -18,6 +19,22 @@
 #include "interrupts/idt.hpp"
 #include <stdint.h>
 
+#define MSR_IA32_PAT 0x277
+
+// Read an MSR (Model-Specific Register)
+uint64_t read_msr(uint32_t msr) {
+    uint32_t low, high;
+    asm volatile("rdmsr" : "=a"(low), "=d"(high) : "c"(msr));
+    return ((uint64_t)high << 32) | low;
+}
+
+// Write an MSR (Model-Specific Register)
+void write_msr(uint32_t msr, uint64_t value) {
+    uint32_t low = (uint32_t)value;
+    uint32_t high = (uint32_t)(value >> 32);
+    asm volatile("wrmsr" : : "c"(msr), "a"(low), "d"(high));
+}
+
 void prepare_memory(boot_info_t *boot_info) {
 	uint64_t m_map_entries = boot_info->m_map_size / boot_info->m_map_descriptor_size;
 
@@ -28,10 +45,6 @@ void prepare_memory(boot_info_t *boot_info) {
 	uint64_t kernel_pages = (uint64_t)kernel_size / 4096 + 1;
 
 	global_allocator.lock_pages(&_KernelStart, kernel_pages);
-
-	//init_dynamic_mem();
-
-	//allocator.lock_pages(graphics.backbuffer, (graphics.get_width() * graphics.get_height() * 4) / 4096 + 1);
 
 	PageTable *PML4 = (PageTable *)global_allocator.request_page();
 	memset(PML4, 0, 0x1000);
@@ -50,7 +63,16 @@ void prepare_memory(boot_info_t *boot_info) {
 	}
 
 	asm("mov %0, %%cr3" : : "r" (PML4)); //putting PML4 into cr3 register
+
+	uint64_t pat = read_msr(MSR_IA32_PAT);
+	// Configure PAT entries for Write-Combining (WC)
+    // Entry 0: WB (Write-Back) - Default for regular RAM
+    // Entry 1: WC (Write-Combining) - Use for framebuffer
+    // Entry 2: UC (Uncacheable) - Use for MMIO and other uncacheable regions
+    pat = 0x0007010600070106ULL;
+	write_msr(MSR_IA32_PAT, pat);
 }
+
 
 IDTR idtr;
 void set_idt_gate(void* handler, uint8_t entry_offset, uint8_t type_attr, uint8_t selector){
@@ -97,12 +119,14 @@ extern "C" void _start(boot_info_t *boot_info) {
 
 	prepare_memory(boot_info);
 
-	init_heap((void *)0x0000100000000000, (50 * 1024 * 1024) / 4096); //50 MiB //0x0000100000000000
+	init_heap((void *)0x0000100000000000, (75 * 1024 * 1024) / 4096); //75 MiB //0x0000100000000000
 
 	prepare_interrupts();
 
 	temp_graphics = Graphics(boot_info->framebuffer, boot_info->font);
 	graphics = &temp_graphics;
+
+	//global_allocator.set_page_attribute(boot_info->framebuffer, true); //supposed to make framebuffer writecombining but doesnt seem to do much
 
 	PIT::set_divisor(2983*8); //resonable precision, 1193182 / 2983 = ~399.993966, this means ~400 ticks a second
 
@@ -115,7 +139,7 @@ extern "C" void _start(boot_info_t *boot_info) {
 
 	shell->init_shell();
 
-	//prepare_acpi(boot_info);
+	prepare_acpi(boot_info);
 
 	/*AHCI::Port *port = ((AHCI::AHCIDriver *)(PCI::get_ahci_driver(0)))->disk_drive; //gets the main hard drive
 	port->buffer = (uint8_t *)global_allocator.request_page();
@@ -126,7 +150,7 @@ extern "C" void _start(boot_info_t *boot_info) {
 		out::cprint(port->buffer[t]);
 	}*/
 
-	//FAT32 fs(0);
+	FAT32 fs(0);
 
 	shell->start_loop();
 

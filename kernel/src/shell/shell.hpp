@@ -4,8 +4,10 @@
 #include "../kernel/io.hpp"
 #include "../memory/mem.hpp"
 #include "../memory/page_frame_allocator.hpp"
+#include "window_mgr/window_manager.hpp"
 #include "commands/command_manager.hpp"
 #include "input/mouse.hpp"
+#include "window_mgr/canvas.hpp"
 
 #define SHELL_COLOR 0xFFEEEEEE
 #define MAX_COMMAND_CHARACTERS 256
@@ -25,11 +27,14 @@ class Shell {
 	void update_cursor(bool update_state);
 	Mouse *mouse;
 	uint64_t fps;
-	uint32_t *shell_backbuffer;
+	Canvas *toolbar_canvas;
+	Canvas *shell_canvas;
 
 	public:
-	//CommandManager cmd_manager;
+	WindowManager *window_manager;
+	
 	Shell();
+	void make_window();
 	void init_shell();
 	void start_loop();
 	void execute_command(char *args);

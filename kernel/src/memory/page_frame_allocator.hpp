@@ -18,11 +18,13 @@ class PageFrameAllocator {
 	Bitmap page_bitmap;
 	
 	void read_efi_memory_map(EFI_MEMORY_DESCRIPTOR *m_map, size_t m_map_size, size_t m_map_desc_size);
+	void set_page_attribute(void *address, bool write_combining);
 	void free_page(void *address);
 	void lock_page(void *address);
 	void free_pages(void *address, uint64_t page_count);
 	void lock_pages(void *address, uint64_t page_count);
 	void *request_page();
+	void *request_pages(size_t num_pages);
 	uint64_t get_free_memory();
 	uint64_t get_used_memory();
 	uint64_t get_reserved_memory();

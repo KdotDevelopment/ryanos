@@ -1,5 +1,6 @@
 @echo -off
-mode 80 25
+
+set StartupDelay 0
 
 cls
 if exist .\efi\boot\main.efi then

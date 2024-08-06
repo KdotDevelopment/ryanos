@@ -4,13 +4,24 @@
 Point cursor_pos(0,0);
 Point user_begin_pos(4,0);
 uint32_t out_color = 0xFF000000;
+Canvas *io_canvas = NULL;
 
 void out::set_color(uint32_t new_color) {
 	out_color = new_color;
 }
 
+void out::set_canvas(Canvas *canvas) {
+	io_canvas = canvas;
+}
+
+void out::clear() {
+	io_canvas->gfx->set_color(SHELL_COLOR);
+	io_canvas->gfx->clear_screen();
+	set_cursor_pos(0,0);
+}
+
 void out::print(const char *str) {
-	uint32_t prev_color = graphics->get_color();
+	uint32_t prev_color = io_canvas->gfx->get_color();
 	char *chr = (char *)str;
 	while(*chr != 0) {
 		if(*chr == '\n') {
@@ -18,43 +29,43 @@ void out::print(const char *str) {
 			cursor_pos.y += 1;
 			user_begin_pos.y += 1;
 		}else {
-			graphics->set_color(SHELL_COLOR);
-			graphics->draw_rect(Point((cursor_pos.x * 8) + 5, (cursor_pos.y * 16) + 45),
-								Point((cursor_pos.x * 8) + 5 + 8, (cursor_pos.y * 16) + 45 + 16)); //clears the current space so two characters can't overlap
-			graphics->set_color(out_color);
-			graphics->draw_char(Point((cursor_pos.x * 8) + 5, (cursor_pos.y * 16) + 45), *chr); //don't draw a '\n'!
+			io_canvas->gfx->set_color(SHELL_COLOR);
+			io_canvas->gfx->draw_rect(Point((cursor_pos.x * 8) + 5, (cursor_pos.y * 16)),
+								Point((cursor_pos.x * 8) + 5 + 8, (cursor_pos.y * 16) + 16)); //clears the current space so two characters can't overlap
+			io_canvas->gfx->set_color(out_color);
+			io_canvas->gfx->draw_char(Point((cursor_pos.x * 8) + 5, (cursor_pos.y * 16)), *chr); //don't draw a '\n'!
 			cursor_pos.x += 1;
 		}
-		if((cursor_pos.x * 8) + 16 > graphics->get_width()) {
+		if((cursor_pos.x * 8) + 16 > io_canvas->size.x) {
 			cursor_pos.x = 0;
 			cursor_pos.y += 1;
 		}
 		chr++; //pointer arith.
 	}
 	//graphics->swap();
-	graphics->set_color(prev_color);
+	io_canvas->gfx->set_color(prev_color);
 }
 
 void out::cprint(char chr) {
-	uint32_t prev_color = graphics->get_color();
+	uint32_t prev_color = io_canvas->gfx->get_color();
 	if(chr == '\n') {
 		cursor_pos.x = 0;
 		cursor_pos.y += 1;
 		user_begin_pos.y += 1;
 	}else {
-		graphics->set_color(SHELL_COLOR);
-		graphics->draw_rect(Point((cursor_pos.x * 8) + 5, (cursor_pos.y * 16) + 45),
-							Point((cursor_pos.x * 8) + 5 + 8, (cursor_pos.y * 16) + 45 + 16)); //clears the current space so two characters can't overlap
-		graphics->set_color(out_color);
-		graphics->draw_char(Point((cursor_pos.x * 8) + 5, (cursor_pos.y * 16) + 45), chr); //don't draw a '\n'!
+		io_canvas->gfx->set_color(SHELL_COLOR);
+		io_canvas->gfx->draw_rect(Point((cursor_pos.x * 8) + 5, (cursor_pos.y * 16)),
+							Point((cursor_pos.x * 8) + 5 + 8, (cursor_pos.y * 16) + 16)); //clears the current space so two characters can't overlap
+		io_canvas->gfx->set_color(out_color);
+		io_canvas->gfx->draw_char(Point((cursor_pos.x * 8) + 5, (cursor_pos.y * 16)), chr); //don't draw a '\n'!
 		cursor_pos.x += 1;
 	}
-	if((cursor_pos.x * 8) + 16 > graphics->get_width()) {
+	if((cursor_pos.x * 8) + 16 > io_canvas->size.x) {
 		cursor_pos.x = 0;
 		cursor_pos.y += 1;
 	}
 	//graphics->swap();
-	graphics->set_color(prev_color);
+	io_canvas->gfx->set_color(prev_color);
 }
 
 void out::set_cursor_pos(int x, int y) {
@@ -67,7 +78,7 @@ Point out::get_cursor_pos() {
 }
 
 Point out::get_cursor_coords() {
-	return Point((cursor_pos.x * 8) + 5, (cursor_pos.y * 16) + 45);
+	return Point((cursor_pos.x * 8) + 5, (cursor_pos.y * 16));
 }
 
 void out::backspace() {
@@ -75,13 +86,13 @@ void out::backspace() {
 	if(cursor_pos.x > 0) cursor_pos.x -= 1;
 	else {
 		cursor_pos.y -= 1;
-		cursor_pos.x = (graphics->get_width() - 10) / 8;
+		cursor_pos.x = (io_canvas->size.x - 10) / 8;
 	}
-	uint32_t prev_color = graphics->get_color();
-	graphics->set_color(SHELL_COLOR);
-	graphics->draw_rect(Point((cursor_pos.x * 8) + 5, (cursor_pos.y * 16) + 45),
-						Point((cursor_pos.x * 8) + 5 + 8, (cursor_pos.y * 16) + 45 + 16)); //clears the current space so two characters can't overlap
-	graphics->set_color(prev_color);
+	uint32_t prev_color = io_canvas->gfx->get_color();
+	io_canvas->gfx->set_color(SHELL_COLOR);
+	io_canvas->gfx->draw_rect(Point((cursor_pos.x * 8) + 5, (cursor_pos.y * 16)),
+						Point((cursor_pos.x * 8) + 5 + 8, (cursor_pos.y * 16) + 16)); //clears the current space so two characters can't overlap
+	io_canvas->gfx->set_color(prev_color);
 	//graphics->swap();
 }
 

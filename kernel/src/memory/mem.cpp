@@ -97,6 +97,9 @@ void *merge_next_node_into_current(dynamic_mem_node_t *current_node) {
 	
 	//removes the next node
 	current_node->next = next_node->next;
+	if (current_node->next != NULL) {
+		current_node->next->prev = current_node;
+ 	}
 
 	current_node->next->prev = current_node;
 
@@ -235,7 +238,7 @@ void aligned_free(void *ptr) {
     }
 }
 
-void expand_heap(size_t length) {
+/*void expand_heap(size_t length) {
 	if (length % 0x1000) {
 		length -= length % 0x1000;
 		length += 0x1000;
@@ -248,7 +251,56 @@ void expand_heap(size_t length) {
         page_table_manager.map_memory(heap_end, global_allocator.request_page());
         heap_end = (void*)((size_t)heap_end + 0x1000);
     }
+}*/
+
+void expand_heap(size_t length) {
+    // Ensure length is a multiple of 0x1000
+    if (length % 0x1000) {
+        length -= length % 0x1000;
+        length += 0x1000;
+    }
+
+    size_t page_count = length / 0x1000;
+    dynamic_mem_node_t *new_node = (dynamic_mem_node_t *)heap_end;
+    void *old_heap_end = heap_end;
+
+    // Map new pages
+    for (size_t i = 0; i < page_count; i++) {
+        void *new_page = global_allocator.request_page();
+        if (new_page == NULL) {
+            // Handle page allocation failure
+            // Rollback already allocated pages if necessary
+            heap_end = old_heap_end;
+            return;
+        }
+        page_table_manager.map_memory(heap_end, new_page);
+        heap_end = (void *)((size_t)heap_end + 0x1000);
+    }
+
+    // Update the new node's properties
+    new_node->size = length - sizeof(dynamic_mem_node_t);
+    new_node->used = false;
+    new_node->next = NULL;
+    new_node->prev = NULL;
+
+    // Link the new node to the existing heap structure
+    dynamic_mem_node_t *last_node = (dynamic_mem_node_t *)((uint8_t *)old_heap_end - sizeof(dynamic_mem_node_t));
+    if (heap_start == old_heap_end) {
+        // This is the first node in the heap
+        heap_start = new_node;
+    } else {
+        // Find the last node in the current heap
+        while (last_node->next != NULL) {
+            last_node = last_node->next;
+        }
+        last_node->next = new_node;
+        new_node->prev = last_node;
+    }
+
+    // Update heap length
+    heap_length += length;
 }
+       
 
 /*void memcopy(void *dest, const void *src, size_t n) {
 	// Pointers to the start of the source and destination buffers

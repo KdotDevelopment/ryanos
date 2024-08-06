@@ -3,14 +3,17 @@
 #include <stdint.h>
 #include "../graphics/point.hpp"
 #include "../graphics/graphics.hpp"
+#include "window_mgr/canvas.hpp"
 #include "shell.hpp"
 
 extern Point cursor_pos;
 extern Point user_begin_pos;
 extern uint32_t out_color;
+extern Canvas *io_canvas;
 
 namespace out {
 	void set_cursor_pos(int x, int y);
+	void set_canvas(Canvas *canvas);
 	Point get_cursor_pos();
 	Point get_cursor_coords();
 	void set_color(uint32_t color);
@@ -18,6 +21,7 @@ namespace out {
 	void backspace();
 	void init_user();
 	void enter();
+	void clear();
 	void print(const char *str);
 	void cprint(char chr);
 	void print(int64_t value);

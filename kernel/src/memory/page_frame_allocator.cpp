@@ -1,5 +1,6 @@
 #include "page_frame_allocator.hpp"
 #include "../shell/shell.hpp"
+#include "page_table_manager.hpp"
 
 bool initialized = false;
 
@@ -54,6 +55,19 @@ void PageFrameAllocator::init_bitmap(size_t bitmap_size, void *buffer_address) {
 	}
 }
 
+void PageFrameAllocator::set_page_attribute(void *address, bool write_combining) {
+    uint64_t page_address = (uint64_t)address;
+    PageDirectoryEntry *pte = page_table_manager.get_page_table_entry(page_address);
+
+    if (pte->get_address()) {
+        if (write_combining) {
+            *(uint64_t *)pte->value = (*(uint64_t *)pte->value & ~0x3) | 0x01; // Set the PAT index to 1 (Write-Combining)
+        } else {
+            *(uint64_t *)pte->value = (*(uint64_t *)pte->value & ~0x3) | 0x00; // Set the PAT index to 0 (default Write-Back)
+        }
+    }
+}
+
 uint64_t page_bitmap_index = 0;
 void *PageFrameAllocator::request_page() {
 	for(; page_bitmap_index < page_bitmap.size * 8; page_bitmap_index++) {
@@ -63,6 +77,29 @@ void *PageFrameAllocator::request_page() {
 	}
 
 	return NULL; //page frame swap to hdd file, ran out of physical mem
+}
+
+void *PageFrameAllocator::request_pages(size_t num_pages) {
+    uint64_t start_index = page_bitmap_index;
+    size_t contiguous_pages = 0;
+
+    for(; page_bitmap_index < page_bitmap.size * 8; page_bitmap_index++) {
+        if(page_bitmap[page_bitmap_index] == true) {
+            contiguous_pages = 0;
+            start_index = page_bitmap_index + 1;
+            continue;
+        }
+        
+        if (++contiguous_pages == num_pages) {
+            for (size_t i = 0; i < num_pages; i++) {
+                lock_page((void *)((start_index + i) * 4096));
+            }
+            return (void *)(start_index * 4096);
+        }
+    }
+
+    // No sufficient contiguous pages found
+    return NULL; // Page frame swap to HDD file, ran out of physical memory
 }
 
 void PageFrameAllocator::free_page(void *address) {

@@ -41,6 +41,7 @@ void Shell::handle_keyboard(uint8_t scancode) {
 	char ascii = QWERTYKeyboard::translate(scancode, is_left_shift_pressed || is_right_shift_pressed);
 
 	if(ascii != 0) {
+		if(current_line_index > MAX_COMMAND_CHARACTERS) return;
 		out::cprint(ascii);
 		current_line[current_line_index] = ascii;
 		current_line_index++;

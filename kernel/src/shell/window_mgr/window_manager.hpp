@@ -12,7 +12,8 @@ class WindowManager {
 		Window *window;
 	}; //Linked List 1, Bad cpp Vector 0 :)
 
-	size_t window_count = 1;
+	size_t window_count = 0;
+	size_t id_count = 0;
 
 	WindowNode *first_node;
 
@@ -27,5 +28,6 @@ class WindowManager {
 	void handle(Mouse *mouse);
 
 	Window *create_window(Point initial_pos, Point size);
+	Window *get_from_id(size_t id);
 	void delete_window(size_t index);
 };

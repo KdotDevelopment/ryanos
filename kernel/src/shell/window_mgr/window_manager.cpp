@@ -2,6 +2,7 @@
 
 #include "../../memory/mem.hpp"
 #include "../../graphics/graphics.hpp"
+#include "../out.hpp"
 
 WindowManager::WindowManager() {
 	first_node = (WindowNode *)malloc(sizeof(WindowNode));
@@ -14,7 +15,27 @@ Window *WindowManager::create_window(Point initial_pos, Point size) {
 	WindowNode *new_node = (WindowNode *)malloc(sizeof(WindowNode));
 	WindowNode *window_index = first_node;
 	window_count++;
+	id_count++;
 	
+	if(window_count > 1) { //Why four? I have no idea... however it seems to work :)
+		while(window_index->next != NULL) {
+			window_index = window_index->next;
+		}
+
+		if(window_index->prev == NULL) return NULL;
+
+		new_node->next = NULL;
+		new_node->prev = window_index;
+		window_index->next = new_node;
+		new_node->window = new Window(initial_pos, size, window_count);
+		new_node->window->index = 1; //will be reset anyway
+		new_node->window->id = id_count;
+		window_index->next = new_node;
+
+		reset_indices();
+		return new_node->window;
+	}
+
 	while(window_index->next != NULL) {
 		window_index = window_index->next;
 	}
@@ -25,6 +46,7 @@ Window *WindowManager::create_window(Point initial_pos, Point size) {
 	new_node->prev = window_index;
 	new_node->window = new Window(initial_pos, size, window_count);
 	new_node->window->index = 1; //will be reset anyway
+	new_node->window->id = id_count;
 
 	reset_indices();
 
@@ -40,6 +62,10 @@ void WindowManager::handle(Mouse *mouse) {
 		if(window_index == first_node) {
 			window_index = window_index->next;
 			continue;
+		}
+
+		if(window_index->window->hover_window(mouse->last_pos) && window_index->window->index == focus_index) {
+			window_index->window->set_relative_mouse_pos(mouse->last_pos);
 		}
 
 		if(window_index->window->hover_window(mouse->last_pos) && mouse->button_state == M_LEFT && prev_mouse_state != mouse->button_state) { //determine focus, only fires once
@@ -108,6 +134,19 @@ int WindowManager::move_to_top(size_t index) {
 	return new_last_window->window->index;
 }
 
+Window *WindowManager::get_from_id(size_t id) {
+	WindowNode *window_index = first_node->next;
+	if(id < 1) return NULL;
+
+	while(window_index != NULL) {
+		if(window_index->window->id == id) break;
+		if(window_index->next == NULL) break;
+		window_index = window_index->next;
+	}
+	if(window_index->window->id == id) return window_index->window;
+	else return NULL;
+}
+
 void WindowManager::delete_window(size_t index) {
 	WindowNode *window_index = first_node->next;
 
@@ -127,7 +166,9 @@ void WindowManager::delete_window(size_t index) {
 	}
 
 	window_index->window->delete_window();
-	free(window_index);
+	free(window_index->window);
+	window_index->window = NULL;
+	window_index = NULL;
 
 	reset_indices();
 }
@@ -135,10 +176,15 @@ void WindowManager::delete_window(size_t index) {
 void WindowManager::reset_indices() {
 	WindowNode *window_index = first_node;
 
-	size_t index = 1;
+	size_t index = 0;
 
 	while(window_index != NULL) {
 		window_index->window->index = index;
+		if(index == window_count) {
+			window_index->window->has_focus = true;
+		}else {
+			window_index->window->has_focus = false;
+		}
 		index++;
 		window_index = window_index->next;
 	}

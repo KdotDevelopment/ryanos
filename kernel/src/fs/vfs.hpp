@@ -1,6 +1,10 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#define FS_FILE 0
+#define FS_DIRECTORY 1
+#define FS_INVALID 2
+
 // Accordingly to fatfs
 #define FS_MODE_READ 0x01
 #define FS_MODE_WRITE 0x02
@@ -36,30 +40,33 @@
 #define O_TMPFILE (__O_TMPFILE | O_DIRECTORY)
 #define O_NDELAY O_NONBLOCK
 
-typedef struct {
-	MountPoint *next;
-
-	char *prefix;
-
-	uint32_t desk;
-	uint8_t partition;
-	//CONNECTOR connector; //??
-
-	//mbr_partition mbr; //using GDT
-	void *fs_info;
-} MountPoint;
+//YES im writing this like its C, I can imagine myself reusing this code at some point and C is about as portable as it gets
 
 typedef struct {
-	OpenFile *next;
+	char name[32];
+	uint32_t flags;
+	uint32_t file_length;
+	uint32_t id;
+	uint32_t eof;
+	uint32_t position;
+	uint32_t current_cluster;
+	uint32_t device;
+} File;
 
-	int id;
-	int flags;
-	uint32_t mode;
+typedef struct {
+	char name[18];
+	File (*directory)(const char *directory_name);
+	void (*mount)();
+	void (*read)(File *file, unsigned char *buffer, uint32_t length);
+	void (*close)(File *file);
+	File (*open)(const char *filename);
+} Filesystem;
 
-	size_t pointer;
-	size_t tmp1;
+#define DEVICE_MAX 26 //letters a-z
 
-	MountPoint *mount_point;
-	void *dir;
-} OpenFile;
-
+File open_file(const char *filename);
+void read_file(File *file, unsigned char *buffer, uint32_t length);
+void close_file(File *file);
+void register_file_system(Filesystem *fs, uint32_t device_id);
+void unregister_filesystem(Filesystem *fs);
+void unregister_filesystem_by_id(uint32_t device_id);

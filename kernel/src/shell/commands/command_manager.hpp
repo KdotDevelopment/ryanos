@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../out.hpp"
+#include "../shell.hpp"
 
 #define MAX_COMMAND_TOKENS 16
 
@@ -17,4 +18,5 @@ class CommandManager {
 	CommandManager();
 	void parse_command(char *args);
 	void command_echo(int argc, char **argv);
+	void command_window_color(int argc, char **argv);
 };

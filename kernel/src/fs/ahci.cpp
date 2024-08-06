@@ -207,7 +207,7 @@ AHCI::AHCIDriver::AHCIDriver(PCI::PCIDeviceHeader *pci_base_address) {
 		/*port->buffer = (uint8_t *)global_allocator.request_page();
 		memset(port->buffer, 0, 0x1000);
 
-		port->read(12, 4, port->buffer);
+		port->read(0, 4, port->buffer);
 		for(int t = 0; t < 1024; t++) {
 			out::cprint(port->buffer[t]);
 		}

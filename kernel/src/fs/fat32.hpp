@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "ahci.hpp"
+#include "vfs.hpp"
 
 #define FAT32_LFN_CHARS_PER 13
 #define FAT32_LFN_MAX 20
@@ -15,6 +16,7 @@
 #define FAT32_VOLUME_ID 0x08
 #define FAT32_DIRECTORY 0x10
 #define FAT32_ARCHIVE 0x20
+#define FAT32_DEVICE 0x60
 #define FAT32_LFN (FAT32_READ_ONLY | FAT32_HIDDEN | FAT32_SYSTEM | FAT32_VOLUME_ID)
 
 #define FAT32_CACHE_MAX 32
@@ -25,7 +27,7 @@ typedef struct {
 	char extension[3];
 	uint8_t attributes; //READ_ONLY=0x01 HIDDEN=0x02 SYSTEM=0x04 VOLUME_ID=0x08 DIRECTORY=0x10 ARCHIVE=0x20 LFN=READ_ONLY|HIDDEN|SYSTEM|VOLUME_ID 
 	uint8_t reserved;
-	uint8_t creation_seconds; //0-199
+	uint8_t creation_ms; //0-199 - has a resolution of two seconds
 	uint16_t time_created; //5 bits - hour, 6 bits - minutes, 5 bits - seconds
 	uint16_t date_created; //7 bits - year, 4 bits - month, 5 bits - day
 	uint16_t accessed_date; //same format as creation date
@@ -119,6 +121,15 @@ typedef struct {
 	uint32_t size;
 } Partition;
 
+typedef struct {
+	uint8_t seconds;
+	uint8_t minutes;
+	uint8_t hours;
+	uint8_t day;
+	uint8_t month;
+	uint16_t year;
+} DateTime;
+
 class FAT32 {
 	enum FatType {
 		T_ExFAT,
@@ -139,13 +150,24 @@ class FAT32 {
 
 	uint32_t first_data_sector;
 	uint32_t root_dir_start;
+	uint32_t root_dir_sector_count;
 	uint32_t total_sectors;
 	uint32_t total_clusters;
 	uint32_t cluster_size;
 	uint32_t *fat_cache; //see fat32 struct above
 
+	void read_cluster(uint64_t cluster, void *buffer);
+	uint32_t get_sector_number(uint32_t cluster);
+	uint32_t get_cluster_number(Fat32DirectoryEntry *entry);
+	void to_dos_filename(char *filename, char *buffer);
+	DateTime get_creation_date_time(Fat32DirectoryEntry *entry);
+	void tree();
+
 	uint32_t read_fat_entry(uint32_t cluster);
-	uint32_t write_fat_entry(uint32_t cluster, uint32_t value);
+	uint32_t find_free_cluster();
+	void write_fat_entry(uint32_t cluster, uint32_t value);
+
+	File fat_directory(char *directory_name);
 
 	public:
 	FAT32(int driver);

@@ -8,7 +8,7 @@
 //Makes a linked list
 struct dynamic_mem_node_t {
 	uint32_t size;
-	bool used;
+	uint8_t used;
 	struct dynamic_mem_node_t *next;
 	struct dynamic_mem_node_t *prev;
 };

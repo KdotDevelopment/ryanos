@@ -4,12 +4,25 @@
 #include "point.hpp"
 #include "../memory/page_frame_allocator.hpp"
 #include <stdint.h>
+#include <stddef.h>
+
+namespace Graphics3D {
+	struct vec3 {
+		double x, y, z;
+	};
+
+	struct connection {
+		int a, b;
+	};
+
+	void rotate(vec3 *point, float x, float y, float z);
+};
 
 class Graphics {
 	private:
-	psf1_font_t *font;
 	uint32_t color;
 	int width, height, pps;
+	bool direct_write = false; //To use a backbuffer or not
 
 	uint8_t mouse_cursor_icon[12*19] = {
 		1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -34,11 +47,12 @@ class Graphics {
 	};
 
 	public:
-	Graphics();
+	Graphics(bool direct_write);
 	Graphics(Framebuffer *framebuffer, psf1_font_t *font);
 
 	uint32_t *backbuffer;
 	Framebuffer *framebuffer;
+	psf1_font_t *font;
 
 	int get_width();
 	int get_height();
@@ -53,6 +67,7 @@ class Graphics {
 	void draw_char(Point point, char character);
 	void draw_string(Point point, const char *str);
 	void draw_rect(Point point1, Point point2);
+	void draw_line(Point point1, Point point2);
 	void draw_mouse_cursor(Point point);
 	void clear_screen();
 

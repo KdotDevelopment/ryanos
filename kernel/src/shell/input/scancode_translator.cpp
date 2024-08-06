@@ -19,10 +19,28 @@ namespace QWERTYKeyboard {
 		 0 , ' '
 	};
 
+	const char uppercase_ASCII_table[] = {
+		 0 ,  0 , '!', '@',
+		'#', '$', '%', '^',
+		'&', '*', '(', ')',
+		'_', '+',  0 ,  0 ,
+		'Q', 'W', 'E', 'R',
+		'T', 'Y', 'U', 'I',
+		'O', 'P', '{', '}',
+		 0 ,  0 , 'A', 'S',
+		'D', 'F', 'G', 'H',
+		'J', 'K', 'L', ':',
+		'\"','~',  0 , '|',
+		'Z', 'X', 'C', 'V',
+		'B', 'N', 'M', '<',
+		'>', '?',  0 , '*',
+		 0 , ' '
+	};
+
 	char translate(uint8_t scancode, bool uppercase) {
 		if(scancode > 58) return 0; //more than array
 
-		if(uppercase) return ASCII_table[scancode] - 32;
+		if(uppercase) return uppercase_ASCII_table[scancode];
 
 		return ASCII_table[scancode];
 	}

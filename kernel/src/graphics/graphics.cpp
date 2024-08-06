@@ -1,13 +1,15 @@
 #include "graphics.hpp"
 #include "../lib/cstr.hpp"
 #include "../memory/mem.hpp"
+#include "../lib/math.hpp"
 
 Graphics *graphics;
 
-Graphics::Graphics() {
+Graphics::Graphics(bool direct_write) {
 	this->framebuffer = NULL;
 	this->font = NULL;
-	//this->backbuffer = { 0 };
+	this->direct_write = direct_write;
+	//this->backbuffer = NULL;
 }
 
 Graphics::Graphics(Framebuffer *framebuffer, psf1_font_t *font) {
@@ -41,11 +43,14 @@ uint32_t Graphics::get_color() {
 
 void Graphics::set_framebuffer(Framebuffer *framebuffer) {
 	this->framebuffer = framebuffer;
+	this->width = framebuffer->width;
+	this->height = framebuffer->height;
+	this->pps = framebuffer->pps;
 }
 
-/*void Graphics::set_backbuffer(uint32_t *backbuffer) {
+void Graphics::set_backbuffer(uint32_t *backbuffer) {
 	this->backbuffer = backbuffer;
-}*/
+}
 
 void Graphics::set_font(psf1_font_t *font) {
 	this->font = font;
@@ -57,8 +62,11 @@ void Graphics::set_color(uint32_t color) {
 
 void Graphics::draw_pixel(Point point) {
 	if(point.x > framebuffer->width || point.y > framebuffer->height) return;
-	//unsigned int *pix_ptr = (unsigned int *)framebuffer->base_address;
-	//*(unsigned int *)(pix_ptr + point.x + (point.y * framebuffer->pps)) = color;
+	if(direct_write) {
+		unsigned int *pix_ptr = (unsigned int *)framebuffer->base_address;
+		*(unsigned int *)(pix_ptr + point.x + (point.y * framebuffer->pps)) = color;
+		return;
+	}
 	backbuffer[point.y * pps + point.x] = color;
 }
 
@@ -77,6 +85,7 @@ void Graphics::draw_char(Point point, char character) {
 void Graphics::draw_mouse_cursor(Point point) {
 	for(unsigned int y = point.y; y < point.y + 19; y++) {
 		for(unsigned int x = point.x; x < point.x + 12; x++) {
+			if(y >= framebuffer->pps || x >= framebuffer->width) continue;
 			if(mouse_cursor_icon[(y - point.y) * 12 + (x - point.x)] == 1) {
 				graphics->set_color(0xFF000000);
 				draw_pixel(Point(x,y));
@@ -106,55 +115,46 @@ void Graphics::draw_rect(Point point1, Point point2) {
 	if(point1.x < 0 || point1.y < 0) return;
 	if(point2.x < 0 || point2.y < 0) return;
 
-	unsigned int *pix_ptr = (unsigned int *)backbuffer;
+	if(direct_write) {
+		uint32_t *pix_ptr = (uint32_t *)framebuffer->base_address;
+		size_t row_size = (point2.x - point1.x) * sizeof(uint32_t);
+
+		for(uint32_t y = point1.y; y < point2.y; y++) {
+			uint32_t *row_start = pix_ptr + (y * framebuffer->pps) + point1.x;
+			memset(row_start, color, row_size);
+		}
+		return;
+	}
+
+	uint32_t *pix_ptr = (uint32_t *)backbuffer;
 	size_t row_size = (point2.x - point1.x) * sizeof(uint32_t);
 
-	/*for(unsigned int x = point1.x; x < point2.x; x++) {
-		for(unsigned int y = point1.y; y < point2.y; y++) {
-			//draw_pixel(Point(x, y), color);
-			//*(unsigned int *)(pix_ptr + x + (y * framebuffer->pps)) = color;
-			backbuffer[y * pps + x] = color;
-		}
-	}*/
-	for(unsigned int y = point1.y; y < point2.y; y++) {
-		unsigned int *row_start = pix_ptr + (y * framebuffer->pps) + point1.x;
+	for(uint32_t y = point1.y; y < point2.y; y++) {
+		uint32_t *row_start = pix_ptr + (y * framebuffer->pps) + point1.x;
         memset(row_start, color, row_size);
 	}
 }
 
-void Graphics::clear_screen() {
-	/*for(int x = 0; x < get_width(); x++){
-		for(int y = 0; y < get_height(); y++) {
-			backbuffer[y * pps + x] = color;
-		}
-	}*/
-	/*uint64_t fb_base = (uint64_t)framebuffer->base_address;
-    uint64_t bpsl = framebuffer->pps * 4;
-    uint64_t fb_height = framebuffer->height;
-    uint64_t fb_size = framebuffer->buffer_size;
+void Graphics::draw_line(Point point1, Point point2) {
+	Point d_pos = Point(point2.x - point1.x, point2.y - point1.y);
+	float length = sqrt(d_pos.x * d_pos.x + d_pos.y * d_pos.y);
+	float angle = atan2(d_pos.y, d_pos.x);
 
-    for (int vertical_scanline = 0; vertical_scanline < fb_height; vertical_scanline ++){
-        uint64_t pix_ptr_base = fb_base + (bpsl * vertical_scanline);
-        for (uint32_t* pix_ptr = (uint32_t*)pix_ptr_base; pix_ptr < (uint32_t*)(pix_ptr_base + bpsl); pix_ptr ++){
-            *pix_ptr = color;
-        }
-    }*/
+	for(uint64_t i = 0; i < length; i++) {
+		draw_pixel(Point(point1.x + cos(angle) * i, 
+		                 point1.y + sin(angle) * i));
+	}
+}
+
+void Graphics::clear_screen() {
+	if(direct_write) {
+		memset(framebuffer->base_address, color, framebuffer->buffer_size);
+		return;
+	}
 	memset(backbuffer, color, framebuffer->buffer_size);
 }
 
 void Graphics::swap() {
-	//if (framebuffer == NULL || backbuffer == NULL) return;
-	/*uint64_t base = (uint64_t)framebuffer->base_address;
-	uint64_t bpsl = framebuffer->pps * 4; //Bytes per scan line
-	uint64_t height = framebuffer->height;
-
-	for(int verticalScanline = 0; verticalScanline < height; verticalScanline++) {
-		uint64_t pix_ptr_base = base + (bpsl * verticalScanline);
-		uint32_t *back_pix_ptr = (uint32_t *)(*backbuffer + (bpsl * verticalScanline));
-		for(uint32_t *pix_ptr = (uint32_t *)pix_ptr_base; pix_ptr < (uint32_t *)(pix_ptr_base + bpsl); pix_ptr++) {
-			*pix_ptr = *backbuffer++;
-		}
-	}*/
-	//uint32_t *pix_ptr = (uint32_t *)framebuffer->base_address;
+	if(direct_write) return; //its already direct, nothing to write!
     memcopy((uint32_t *)framebuffer->base_address, backbuffer, framebuffer->buffer_size);
 }
