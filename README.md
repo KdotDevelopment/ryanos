@@ -12,4 +12,5 @@ PS/2 Keyboard/Mouse drivers\
 AHCI driver
 
 Work in Progress:\
-FAT32 Filesystem
+FAT32 Filesystem\
+C Compiler
