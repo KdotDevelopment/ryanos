@@ -9,7 +9,7 @@ Paging\
 PCI devices\
 Window manager\
 PS/2 Keyboard/Mouse drivers\
-AHCI driver\
+AHCI driver
 
 Work in Progress:\
-FAT32 Filesystem\
+FAT32 Filesystem
